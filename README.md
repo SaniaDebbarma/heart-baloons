@@ -12,7 +12,10 @@ An HTML5 Canvas animation that brings the motivational phrase **"Whatever it Tak
 ---
 
 ## 📸 Preview
-![Preview]( interface.jpg) 
+![Preview]( screenshot1.jpg)
+![Preview]( screenshot2.jpg)
+![Preview]( screenshot3.jpg)
+
 
 ---
 
@@ -30,3 +33,30 @@ An HTML5 Canvas animation that brings the motivational phrase **"Whatever it Tak
 2. Open the `index.html` file in your browser:
    ```bash
    open index.html
+   3.	Enjoy the animation!
+
+⸻
+
+🎯 Customization
+
+You can easily change:
+	•	Text → edit opts.strings in the script
+	•	Colors → modify balloon, ribbon, and firework colors
+	•	Speeds & sizes → adjust firework and balloon parameters
+	•	Sparkle density → tweak sparkleChance and sparkleMaxSize
+
+⸻
+
+🛠️ How It Works
+	•	Each letter goes through 3 phases:
+	1.	Firework Phase — launches upward with a sparkling trail
+	2.	Contemplate Phase — letter appears glowing with an explosion of shards
+	3.	Balloon Phase — heart balloon inflates and floats the letter away
+	•	Animation loops endlessly for continuous celebration.
+
+⸻
+
+📄 License
+
+This project is licensed under the MIT License — free to use, modify, and share.
+

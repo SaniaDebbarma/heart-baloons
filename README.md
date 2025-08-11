@@ -12,7 +12,7 @@ An HTML5 Canvas animation that brings the motivational phrase **"Whatever it Tak
 ---
 
 ## 📸 Preview
-![Preview]( screenshot1.jpg)
+![Preview]( scrrenshot1.jpg)
 ![Preview]( screenshot2.jpg)
 ![Preview]( screenshot3.jpg)
 

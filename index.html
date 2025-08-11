@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title> Heart Balloons</title>
+  <style>
+    html,body{height:100%;margin:0;background:#08060a;}
+    canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+    p{position:fixed;bottom:6px;left:6px;margin:0;color:#ddd;font:12px Verdana}
+    body{overflow:hidden}
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <p>By Sania Debbarma</p>
+
+  <script>
+   
+    const c = document.getElementById('c');
+    let w = (c.width = window.innerWidth),
+        h = (c.height = window.innerHeight),
+        ctx = c.getContext('2d'),
+        hw = w/2, hh = h/2;
+
+    const opts = {
+      strings: ["Whatever","it Takes"],
+      charSize: 44,
+      charSpacing: 50,
+      lineHeight: 70,
+
+      cx: w/2, cy: h/2,
+
+      // fireworks
+      fireworkPrevPoints: 12,
+      fireworkBaseLineWidth: 4,
+      fireworkAddedLineWidth: 8,
+      fireworkSpawnTime: 180,
+      fireworkBaseReachTime: 36,
+      fireworkAddedReachTime: 36,
+      fireworkCircleBaseSize: 22,
+      fireworkCircleAddedSize: 12,
+      fireworkCircleBaseTime: 28,
+      fireworkCircleAddedTime: 28,
+      fireworkCircleFadeBaseTime: 12,
+      fireworkCircleFadeAddedTime: 8,
+      fireworkBaseShards: 6,
+      fireworkAddedShards: 6,
+      fireworkShardPrevPoints: 4,
+      fireworkShardBaseVel: 4.5,
+      fireworkShardAddedVel: 2.5,
+      fireworkShardBaseSize: 2.5,
+      fireworkShardAddedSize: 3,
+
+      gravity: 0.12,
+      upFlow: -0.08,
+
+      letterContemplatingWaitTime: 360,
+
+      // balloons
+      balloonSpawnTime: 18,
+      balloonBaseInflateTime: 12,
+      balloonAddedInflateTime: 14,
+      balloonBaseSize: 28,
+      balloonAddedSize: 30,
+      balloonBaseVel: 0.45,
+      balloonAddedVel: 0.5,
+      balloonBaseRadian: -(Math.PI/2 - 0.6),
+      balloonAddedRadian: -1.0,
+
+      // sparkle
+      sparkleChance: 0.24,
+      sparkleMaxSize: 3
+    };
+
+    const calc = { totalWidth: opts.charSpacing * Math.max(opts.strings[0].length, opts.strings[1].length) };
+    const Tau = Math.PI*2, TauQuarter = Tau/4;
+    const letters = [];
+
+    ctx.font = opts.charSize + 'px Verdana';
+
+    function Letter(char,x,y){
+      this.char = char;
+      this.x = x; this.y = y;
+      this.dx = -ctx.measureText(char).width/2;
+      this.dy = +opts.charSize/2;
+      this.fireworkDy = this.y - hh;
+
+      // balloons should be red; give slight variation per letter
+      const baseHue = 355 + (Math.random()*10 - 5); // around red
+      this.color = `hsl(${baseHue},85%,46%)`;
+      this.lightAlphaColor = `hsla(${baseHue},85%,70%,alp)`;
+      this.lightColor = `hsl(${baseHue},85%,70%)`;
+      this.alphaColor = `hsla(${baseHue},85%,50%,alp)`;
+
+      this.reset();
+    }
+
+    Letter.prototype.reset = function(){
+      this.phase = 'firework';
+      this.tick = 0; this.spawned = false;
+      this.spawningTime = (opts.fireworkSpawnTime * Math.random())|0;
+      this.reachTime = (opts.fireworkBaseReachTime + opts.fireworkAddedReachTime * Math.random())|0;
+      this.lineWidth = opts.fireworkBaseLineWidth + opts.fireworkAddedLineWidth * Math.random();
+      this.prevPoints = [[0, hh, 0]];
+    }
+
+    Letter.prototype.step = function(){
+      if(this.phase === 'firework'){
+        if(!this.spawned){
+          ++this.tick; if(this.tick >= this.spawningTime){ this.tick = 0; this.spawned = true; }
+        } else {
+          ++this.tick;
+          const linearProportion = this.tick / this.reachTime;
+          const armonicProportion = Math.sin(linearProportion * TauQuarter);
+          const x = linearProportion * this.x;
+          const y = hh + armonicProportion * this.fireworkDy;
+
+          if(this.prevPoints.length > opts.fireworkPrevPoints) this.prevPoints.shift();
+          this.prevPoints.push([x,y,linearProportion * this.lineWidth]);
+
+          
+          const lineWidthProportion = 1/(this.prevPoints.length-1);
+          for(let i=1;i<this.prevPoints.length;++i){
+            const point = this.prevPoints[i], point2 = this.prevPoints[i-1];
+            ctx.strokeStyle = this.alphaColor.replace('alp', i/this.prevPoints.length);
+            ctx.lineWidth = point[2] * lineWidthProportion * i;
+            ctx.beginPath(); ctx.moveTo(point[0],point[1]); ctx.lineTo(point2[0],point2[1]); ctx.stroke();
+
+            
+            if(Math.random() < opts.sparkleChance){
+              const sx = point[0] + (Math.random()-0.5)*6;
+              const sy = point[1] + (Math.random()-0.5)*6;
+              const s = Math.random()*opts.sparkleMaxSize;
+              ctx.beginPath();
+              ctx.globalAlpha = 0.9*Math.random();
+              ctx.fillStyle = 'rgba(255,220,150,'+ (0.6+Math.random()*0.4) +')';
+              ctx.arc(sx,sy,s,0,Tau);
+              ctx.fill();
+              ctx.globalAlpha = 1;
+            }
+          }
+
+          if(this.tick >= this.reachTime){
+            this.phase = 'contemplate';
+
+            this.circleFinalSize = opts.fireworkCircleBaseSize + opts.fireworkCircleAddedSize * Math.random();
+            this.circleCompleteTime = (opts.fireworkCircleBaseTime + opts.fireworkCircleAddedTime * Math.random())|0;
+            this.circleCreating = true; this.circleFading = false;
+            this.circleFadeTime = (opts.fireworkCircleFadeBaseTime + opts.fireworkCircleFadeAddedTime * Math.random())|0;
+            this.tick = 0; this.tick2 = 0;
+
+            
+            this.shards = [];
+            const shardCount = (opts.fireworkBaseShards + opts.fireworkAddedShards * Math.random())|0;
+            const angle = Tau / shardCount;
+            const cos = Math.cos(angle), sin = Math.sin(angle);
+            let x1 = 1, y1 = 0, x2;
+            for(let i=0;i<shardCount;++i){
+              x2 = x1*cos - y1*sin; y1 = y1*cos + x1*sin; x1 = x2;
+              this.shards.push(new Shard(this.x, this.y, x1, y1, this.alphaColor));
+            }
+          }
+        }
+      } else if(this.phase === 'contemplate'){
+        ++this.tick;
+        if(this.circleCreating){
+          ++this.tick2;
+          const proportion = this.tick2 / this.circleCompleteTime;
+          const armonic = -Math.cos(proportion*Math.PI)/2 + 0.5;
+
+          ctx.beginPath();
+          ctx.fillStyle = this.lightAlphaColor.replace('alp', proportion);
+          ctx.arc(this.x, this.y, armonic * this.circleFinalSize,0,Tau);
+          ctx.fill();
+
+          if(this.tick2 > this.circleCompleteTime){ this.tick2 = 0; this.circleCreating = false; this.circleFading = true; }
+        } else if(this.circleFading){
+          ctx.fillStyle = this.lightColor;
+          ctx.fillText(this.char, this.x + this.dx, this.y + this.dy);
+
+          ++this.tick2;
+          const proportion = this.tick2 / this.circleFadeTime;
+          const armonic = -Math.cos(proportion*Math.PI)/2 + 0.5;
+
+          ctx.beginPath(); ctx.fillStyle = this.lightAlphaColor.replace('alp', 1-armonic); ctx.arc(this.x,this.y,this.circleFinalSize,0,Tau); ctx.fill();
+
+          if(this.tick2 >= this.circleFadeTime) this.circleFading = false;
+        } else {
+          ctx.fillStyle = this.lightColor; ctx.fillText(this.char, this.x + this.dx, this.y + this.dy);
+        }
+
+        
+        for(let i=0;i<this.shards.length;++i){
+          this.shards[i].step(); if(!this.shards[i].alive){ this.shards.splice(i,1); --i; }
+        }
+
+        if(this.tick > opts.letterContemplatingWaitTime){
+          this.phase = 'balloon';
+          this.tick = 0; this.spawning = true; this.spawnTime = (opts.balloonSpawnTime * Math.random())|0; this.inflating = false;
+          this.inflateTime = (opts.balloonBaseInflateTime + opts.balloonAddedInflateTime * Math.random())|0;
+          this.size = (opts.balloonBaseSize + opts.balloonAddedSize * Math.random())|0;
+
+          const rad = opts.balloonBaseRadian + opts.balloonAddedRadian * Math.random();
+          const vel = opts.balloonBaseVel + opts.balloonAddedVel * Math.random();
+          this.vx = Math.cos(rad) * vel; this.vy = Math.sin(rad) * vel;
+        }
+      } else if(this.phase === 'balloon'){
+        ctx.strokeStyle = '#111';
+
+        if(this.spawning){
+          ++this.tick; ctx.fillStyle = this.lightColor; ctx.fillText(this.char, this.x+this.dx, this.y+this.dy);
+          if(this.tick >= this.spawnTime){ this.tick = 0; this.spawning = false; this.inflating = true; }
+        } else if(this.inflating){
+          ++this.tick;
+          const proportion = this.tick / this.inflateTime;
+          const x = (this.cx = this.x), y = (this.cy = this.y - this.size * proportion);
+
+          
+          ctx.fillStyle = this.alphaColor.replace('alp', proportion);
+          ctx.beginPath(); generateHeartPath(x,y,this.size * proportion); ctx.fill();
+
+          // ribbon
+          ctx.beginPath(); ctx.moveTo(x, y + (this.size*proportion)/2);
+          ctx.lineTo(x, this.y + (this.size*proportion)/1.6);
+          ctx.lineWidth = 1.3; ctx.strokeStyle = '#000'; ctx.stroke();
+
+          ctx.fillStyle = this.lightColor; ctx.fillText(this.char, this.x+this.dx, this.y+this.dy);
+
+          if(this.tick >= this.inflateTime){ this.tick = 0; this.inflating = false; }
+        } else {
+          this.cx += this.vx; this.cy += this.vy += opts.upFlow;
+
+          
+          ctx.fillStyle = this.color; ctx.beginPath(); generateHeartPath(this.cx, this.cy, this.size); ctx.fill();
+
+          
+          ctx.beginPath();
+          ctx.strokeStyle = '#050505'; ctx.lineWidth = 1.8;
+          ctx.moveTo(this.cx, this.cy + this.size*0.4);
+          ctx.quadraticCurveTo(this.cx - 6, this.cy + this.size*0.8, this.cx, this.cy + this.size*1.25);
+          ctx.quadraticCurveTo(this.cx + 6, this.cy + this.size*1.5, this.cx - 2, this.cy + this.size*1.9);
+          ctx.stroke();
+
+          
+          ctx.fillStyle = this.lightColor; ctx.fillText(this.char, this.cx + this.dx, this.cy + this.dy + this.size);
+
+         
+          if(this.cy + this.size < -hh || this.cx < -hw || this.cy > hw) this.phase = 'done';
+        }
+      }
+    }
+
+    function Shard(x,y,vx,vy,color){
+      const vel = opts.fireworkShardBaseVel + opts.fireworkShardAddedVel * Math.random();
+      this.vx = vx * vel; this.vy = vy * vel;
+      this.x = x; this.y = y; this.prevPoints = [[x,y]]; this.color = color; this.alive = true;
+      this.size = opts.fireworkShardBaseSize + opts.fireworkShardAddedSize * Math.random();
+    }
+
+    Shard.prototype.step = function(){
+      this.x += this.vx; this.y += this.vy += opts.gravity;
+      if(this.prevPoints.length > opts.fireworkShardPrevPoints) this.prevPoints.shift();
+      this.prevPoints.push([this.x,this.y]);
+
+      const lineWidthProportion = this.size/this.prevPoints.length;
+      for(let k=0;k<this.prevPoints.length-1;++k){
+        const point = this.prevPoints[k], point2 = this.prevPoints[k+1];
+        ctx.strokeStyle = this.color.replace('alp', k/this.prevPoints.length);
+        ctx.lineWidth = k * lineWidthProportion;
+        ctx.beginPath(); ctx.moveTo(point[0],point[1]); ctx.lineTo(point2[0],point2[1]); ctx.stroke();
+      }
+      if(this.prevPoints[0][1] > hh) this.alive = false;
+    }
+
+    
+    function generateHeartPath(x,y,size){
+      const topCurveHeight = size * 0.5;
+      ctx.moveTo(x, y + size/4);
+      ctx.bezierCurveTo(x + size/2, y - topCurveHeight, x + size*1.1, y + size/3, x, y + size);
+      ctx.bezierCurveTo(x - size*1.1, y + size/3, x - size/2, y - topCurveHeight, x, y + size/4);
+    }
+
+    function anim(){
+      window.requestAnimationFrame(anim);
+      ctx.clearRect(0,0,w,h);
+
+      
+      ctx.fillStyle = '#060508'; ctx.fillRect(0,0,w,h);
+
+      ctx.save(); ctx.translate(hw, hh);
+      let done = true;
+      for(let l=0;l<letters.length;++l){ letters[l].step(); if(letters[l].phase !== 'done') done = false; }
+      ctx.restore();
+
+      if(done) for(let l=0;l<letters.length;++l) letters[l].reset();
+    }
+
+    
+    for(let i=0;i<opts.strings.length;++i){
+      for(let j=0;j<opts.strings[i].length;++j){
+        const ch = opts.strings[i][j];
+        letters.push(new Letter(ch,
+          j*opts.charSpacing + opts.charSpacing/2 - (opts.strings[i].length*opts.charSize)/2,
+          i*opts.lineHeight + opts.lineHeight/2 - (opts.strings.length*opts.lineHeight)/2
+        ));
+      }
+    }
+
+    anim();
+
+    window.addEventListener('resize', ()=>{
+      w = c.width = window.innerWidth; h = c.height = window.innerHeight; hw = w/2; hh = h/2; ctx.font = opts.charSize + 'px Verdana';
+    });
+  </script>
+</body>
+</html>
